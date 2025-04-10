@@ -1,7 +1,12 @@
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+
 import streamlit as st
-from src.data_loader import get_odds
-from src.sentiment_analyzer import aggregate_sentiments
-from src.ai_recommender import generate_recommendation
+from data_loader import get_odds
+from sentiment_analyzer import aggregate_sentiments
+from ai_recommender import generate_recommendation
+
 
 st.set_page_config(page_title="Altara Sports", layout="wide")
 
