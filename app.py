@@ -1,12 +1,12 @@
+
+import streamlit as st
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-import streamlit as st
 from data_loader import get_odds
 from sentiment_analyzer import aggregate_sentiments
 from ai_recommender import generate_recommendation
-
 
 st.set_page_config(page_title="Altara Sports", layout="wide")
 
@@ -45,37 +45,41 @@ st.markdown("### Smart Sports Betting Recommendations Powered by Data & AI")
 
 with st.sidebar:
     st.header("Configuration")
-    api_key = st.text_input("Odds API Key", type="password")
     user_pref = st.selectbox("Risk Preference", ["Conservative", "Balanced", "Aggressive"])
     get_recs = st.button("Get Today's Picks")
 
 # --- Main Logic ---
-if get_recs and api_key:
-    st.info("Fetching odds and analyzing sentiment...")
-    odds_data = get_odds(api_key)
+api_key = st.secrets.get("ODDS_API_KEY")
 
-    if not odds_data:
-        st.error("Could not retrieve odds. Check your API key or try later.")
+if get_recs:
+    if not api_key:
+        st.error("Missing ODDS_API_KEY in Streamlit secrets.")
     else:
-        game_info = []
-        for game in odds_data[:3]:  # Limit for now
-            teams = f"{game['home_team']} vs {game['away_team']}"
-            odds = game['bookmakers'][0]['markets'][0]['outcomes']
-            game_info.append({"matchup": teams, "odds": odds})
+        st.info("Fetching odds and analyzing sentiment...")
+        odds_data = get_odds(api_key)
 
-        # Placeholder sentiment
-        sentiment_data = [
-            "Team A is on fire lately!",
-            "Major injury concern for Team B.",
-            "Public is hyped about Player X"
-        ]
-        sentiment_score = aggregate_sentiments(sentiment_data)
+        if not odds_data:
+            st.error("Could not retrieve odds. Check your API key or try later.")
+        else:
+            game_info = []
+            for game in odds_data[:3]:  # Limit for now
+                teams = f"{game['home_team']} vs {game['away_team']}"
+                odds = game['bookmakers'][0]['markets'][0]['outcomes']
+                game_info.append({"matchup": teams, "odds": odds})
 
-        recs = generate_recommendation(game_info, sentiment_score, user_pref.lower())
+            # Placeholder sentiment
+            sentiment_data = [
+                "Team A is on fire lately!",
+                "Major injury concern for Team B.",
+                "Public is hyped about Player X"
+            ]
+            sentiment_score = aggregate_sentiments(sentiment_data)
 
-        st.subheader("📊 Recommendations")
-        st.markdown(f"#### 🧠 AI Picks & Analysis")
-        st.success(recs)
+            recs = generate_recommendation(game_info, sentiment_score, user_pref.lower())
 
-        st.markdown("---")
-        st.caption("Altara Sports - Smarter Bets, Better Outcomes")
+            st.subheader("📊 Recommendations")
+            st.markdown(f"#### 🧠 AI Picks & Analysis")
+            st.success(recs)
+
+            st.markdown("---")
+            st.caption("Altara Sports - Smarter Bets, Better Outcomes")
