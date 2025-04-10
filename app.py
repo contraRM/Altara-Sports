@@ -6,7 +6,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 from data_loader import get_odds
 from sentiment_analyzer import aggregate_sentiments
-from ai_recommender import generate_recommendation
+from ai_recommender import create_assistant, generate_recommendation_assistant
 
 st.set_page_config(page_title="Altara Sports", layout="wide")
 
@@ -44,42 +44,54 @@ st.title("🏈 Altara Sports")
 st.markdown("### Smart Sports Betting Recommendations Powered by Data & AI")
 
 with st.sidebar:
-    st.header("Configuration")
-    user_pref = st.selectbox("Risk Preference", ["Conservative", "Balanced", "Aggressive"])
-    get_recs = st.button("Get Today's Picks")
+    st.header("Configure Your Strategy")
+    sport = st.selectbox("Choose a Sport", ["basketball_nba", "americanfootball_nfl", "soccer_epl"])
+    risk_level = st.selectbox("Risk Preference", ["Conservative", "Balanced", "Aggressive"])
+    get_recs = st.button("Get Recommendations")
 
-# --- Main Logic ---
 api_key = st.secrets.get("ODDS_API_KEY")
 
 if get_recs:
     if not api_key:
         st.error("Missing ODDS_API_KEY in Streamlit secrets.")
     else:
-        st.info("Fetching odds and analyzing sentiment...")
-        odds_data = get_odds(api_key)
+        st.info("Fetching game data...")
+        odds_data = get_odds(api_key, sport=sport)
 
         if not odds_data:
-            st.error("Could not retrieve odds. Check your API key or try later.")
+            st.error("Could not fetch games. Please try again later.")
         else:
-            game_info = []
-            for game in odds_data[:3]:  # Limit for now
-                teams = f"{game['home_team']} vs {game['away_team']}"
-                odds = game['bookmakers'][0]['markets'][0]['outcomes']
-                game_info.append({"matchup": teams, "odds": odds})
+            game_options = [f"{g['home_team']} vs {g['away_team']}" for g in odds_data]
+            selected_games = st.multiselect("Select Games to Include", game_options, max_selections=3)
 
-            # Placeholder sentiment
-            sentiment_data = [
-                "Team A is on fire lately!",
-                "Major injury concern for Team B.",
-                "Public is hyped about Player X"
-            ]
-            sentiment_score = aggregate_sentiments(sentiment_data)
+            if selected_games:
+                st.success("Generating AI-powered recommendations...")
+                filtered_games = []
+                for game in odds_data:
+                    matchup = f"{game['home_team']} vs {game['away_team']}"
+                    if matchup in selected_games:
+                        filtered_games.append({
+                            "matchup": matchup,
+                            "odds": game['bookmakers'][0]['markets'][0]['outcomes']
+                        })
 
-            recs = generate_recommendation(game_info, sentiment_score, user_pref.lower())
+                # Placeholder sentiment
+                sentiment_data = [
+                    "Player A is gaining hype online.",
+                    "Recent injuries could affect Team B's performance.",
+                    "Team C fans are optimistic going into the matchup."
+                ]
+                sentiment_score = aggregate_sentiments(sentiment_data)
 
-            st.subheader("📊 Recommendations")
-            st.markdown(f"#### 🧠 AI Picks & Analysis")
-            st.success(recs)
+                # Create assistant and generate response
+                assistant_id = create_assistant()
+                recs = generate_recommendation_assistant(assistant_id, filtered_games, sentiment_score, risk_level)
 
-            st.markdown("---")
-            st.caption("Altara Sports - Smarter Bets, Better Outcomes")
+                st.subheader("📊 AI Recommendations")
+                st.markdown(f"#### 🧠 AI Picks & Analysis")
+                st.success(recs)
+
+                st.markdown("---")
+                st.caption("Altara Sports - Smarter Bets, Better Outcomes")
+            else:
+                st.warning("Please select at least one game to proceed.")
