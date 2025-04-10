@@ -6,7 +6,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 from data_loader import get_odds
 from sentiment_analyzer import aggregate_sentiments
-from ai_recommender import create_assistant, generate_recommendation_assistant
+from ai_recommender import generate_recommendation_assistant
 
 st.set_page_config(page_title="Altara Sports", layout="wide")
 
@@ -75,7 +75,6 @@ if get_recs:
                             "odds": game['bookmakers'][0]['markets'][0]['outcomes']
                         })
 
-                # Placeholder sentiment
                 sentiment_data = [
                     "Player A is gaining hype online.",
                     "Recent injuries could affect Team B's performance.",
@@ -83,10 +82,7 @@ if get_recs:
                 ]
                 sentiment_score = aggregate_sentiments(sentiment_data)
 
-                # Create assistant and generate response
-                assistant_id = create_assistant()
-                recs = generate_recommendation_assistant(assistant_id, filtered_games, sentiment_score, risk_level)
-
+                recs = generate_recommendation_assistant(filtered_games, sentiment_score, risk_level)
                 st.subheader("📊 AI Recommendations")
                 st.markdown(f"#### 🧠 AI Picks & Analysis")
                 st.success(recs)
