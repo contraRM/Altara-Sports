@@ -66,17 +66,52 @@ Based on this information, recommend two smart bets and one parlay option. Keep 
 
     while run.status != "completed":
         time.sleep(1)
-        run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+        run = client.beta.threads.runs.retrieve(thread_id=run.thread_id, run_id=run.id)
 
     messages = client.beta.threads.messages.list(thread_id=thread.id)
     return messages.data[0].content[0].text.value
 
-# --- UI ---
-st.title("🎯 Altara Sports")
-st.markdown("**AI-powered Sports Betting Recommendations**")
+# --- Custom CSS for premium dark red theme ---
+st.markdown("""
+    <style>
+        html, body, [class*="css"] {
+            background-color: #1a0e0e;
+            color: #f2f2f2;
+        }
+        .stButton>button {
+            background-color: #8b0000;
+            color: white;
+            border-radius: 10px;
+            padding: 0.6em 1.5em;
+            font-weight: bold;
+            border: none;
+        }
+        .stButton>button:hover {
+            background-color: #a60000;
+        }
+        .title-container {
+            text-align: center;
+            padding-top: 1rem;
+            padding-bottom: 0.5rem;
+        }
+        .title-container h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #ff4b4b;
+            margin-bottom: 0.25rem;
+        }
+        .title-container p {
+            font-size: 1.1rem;
+            color: #dddddd;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-sport = st.selectbox("Choose a Sport", ["basketball_nba", "americanfootball_nfl", "soccer_epl"])
-risk = st.selectbox("Select Risk Level", ["Conservative", "Balanced", "Aggressive"])
+# --- UI ---
+st.markdown('<div class="title-container"><h1>Altara Sports</h1><p>AI-powered Sports Betting Recommendations</p></div>', unsafe_allow_html=True)
+
+sport = st.selectbox("🎮 Choose a Sport", ["basketball_nba", "americanfootball_nfl", "soccer_epl"])
+risk = st.selectbox("⚖️ Select Risk Level", ["Conservative", "Balanced", "Aggressive"])
 go = st.button("Get AI Recommendations")
 
 if go:
@@ -87,9 +122,9 @@ if go:
         st.error("No games found or error fetching data.")
     else:
         st.success("Games loaded. Generating recommendations...")
-        formatted = format_games_for_prompt(odds_data[:5])  # Limit to first 5 for simplicity
+        formatted = format_games_for_prompt(odds_data[:5])  # Limit to 5 for simplicity
         recs = get_ai_recommendation(formatted, risk)
 
         st.subheader("📊 AI Betting Recommendations")
-        st.write(recs)
+        st.markdown(f"<div style='color:#ffffff;background:#330000;padding:1rem;border-radius:10px'>{recs}</div>", unsafe_allow_html=True)
         st.caption("Altara Sports – Smarter Bets, Better Outcomes")
