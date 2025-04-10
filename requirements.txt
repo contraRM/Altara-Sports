@@ -1,0 +1,8 @@
+streamlit
+openai
+requests
+pandas
+matplotlib
+vaderSentiment
+praw
+newsapi-python
