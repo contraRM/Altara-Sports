@@ -4,7 +4,7 @@ from openai import OpenAI
 import time
 
 # --- Config ---
-st.set_page_config(page_title="Altara Sports", layout="centered")
+st.set_page_config(page_title="Altara Sport", layout="centered")
 
 # --- Streamlit Secrets ---
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
