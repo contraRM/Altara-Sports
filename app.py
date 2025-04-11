@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 from openai import OpenAI
@@ -11,6 +10,7 @@ st.set_page_config(page_title="Altara Sports", layout="centered")
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 ODDS_API_KEY = st.secrets["ODDS_API_KEY"]
 ASSISTANT_ID = st.secrets["ASSISTANT_ID"]
+NEWS_API_KEY = st.secrets.get("NEWS_API_KEY")
 
 # --- OpenAI Client ---
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -39,18 +39,34 @@ def format_games_for_prompt(games):
             continue
     return "\n".join(summaries)
 
-def get_ai_recommendation(formatted_games, risk_profile):
+def get_news_sentiment(query, api_key):
+    url = f"https://newsapi.org/v2/everything"
+    params = {
+        "q": query,
+        "language": "en",
+        "pageSize": 5,
+        "apiKey": api_key
+    }
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        headlines = [article["title"] for article in response.json().get("articles", [])]
+        return " | ".join(headlines)
+    else:
+        return "No news sentiment available."
+
+def get_ai_recommendation(formatted_games, market, sentiment, risk_profile):
     thread = client.beta.threads.create()
 
     user_prompt = f"""
 You are a smart sports betting assistant.
 
-Here are the upcoming games and their odds:
+Here are the upcoming games and their {market} odds:
 {formatted_games}
 
+Sentiment summary: {sentiment}
 The user prefers a {risk_profile.lower()} betting strategy.
 
-Based on this information, recommend two smart bets and one parlay option. Keep it short, clear, and helpful.
+Based on this, recommend two smart bets and one parlay. Explain briefly why each was chosen.
 """
 
     client.beta.threads.messages.create(
@@ -66,12 +82,12 @@ Based on this information, recommend two smart bets and one parlay option. Keep 
 
     while run.status != "completed":
         time.sleep(1)
-        run = client.beta.threads.runs.retrieve(thread_id=run.thread_id, run_id=run.id)
+        run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
 
     messages = client.beta.threads.messages.list(thread_id=thread.id)
     return messages.data[0].content[0].text.value
 
-# --- Custom CSS for premium dark red theme ---
+# --- Custom Styling ---
 st.markdown("""
     <style>
         html, body, [class*="css"] {
@@ -111,19 +127,31 @@ st.markdown("""
 st.markdown('<div class="title-container"><h1>Altara Sports</h1><p>AI-powered Sports Betting Recommendations</p></div>', unsafe_allow_html=True)
 
 sport = st.selectbox("🎮 Choose a Sport", ["basketball_nba", "americanfootball_nfl", "soccer_epl"])
+market = st.selectbox("📊 Select Market", ["Moneyline (h2h)", "Point Spread (spreads)", "Totals (totals)"])
 risk = st.selectbox("⚖️ Select Risk Level", ["Conservative", "Balanced", "Aggressive"])
 go = st.button("Get AI Recommendations")
 
+# Map user market choice to Odds API format
+market_map = {
+    "Moneyline (h2h)": "h2h",
+    "Point Spread (spreads)": "spreads",
+    "Totals (totals)": "totals"
+}
+
 if go:
-    st.info("Fetching odds...")
-    odds_data = get_odds(ODDS_API_KEY, sport=sport)
+    st.info("Fetching game odds...")
+    odds_data = get_odds(ODDS_API_KEY, sport=sport, market=market_map[market])
 
     if not odds_data:
         st.error("No games found or error fetching data.")
     else:
         st.success("Games loaded. Generating recommendations...")
-        formatted = format_games_for_prompt(odds_data[:5])  # Limit to 5 for simplicity
-        recs = get_ai_recommendation(formatted, risk)
+
+        formatted = format_games_for_prompt(odds_data[:5])  # Limit to 5 games
+
+        sentiment = get_news_sentiment(sport.replace('_', ' '), NEWS_API_KEY) if NEWS_API_KEY else "No sentiment data provided."
+
+        recs = get_ai_recommendation(formatted, market, sentiment, risk)
 
         st.subheader("📊 AI Betting Recommendations")
         st.markdown(f"<div style='color:#ffffff;background:#330000;padding:1rem;border-radius:10px'>{recs}</div>", unsafe_allow_html=True)
