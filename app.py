@@ -66,7 +66,11 @@ Here are the upcoming games and their {market} odds:
 Sentiment summary: {sentiment}
 The user prefers a {risk_profile.lower()} betting strategy.
 
-Based on this, recommend two smart bets and one parlay. Explain briefly why each was chosen.
+Provide:
+- 2 smart betting picks with a short 1-sentence explanation each
+- 1 potential parlay (with reason)
+- A confidence score (0-100%) for each suggestion
+Respond clearly and cleanly.
 """
 
     client.beta.threads.messages.create(
@@ -80,9 +84,11 @@ Based on this, recommend two smart bets and one parlay. Explain briefly why each
         assistant_id=ASSISTANT_ID
     )
 
-    while run.status != "completed":
-        time.sleep(1)
-        run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+    # Typing animation
+    with st.spinner("AI Assistant is analyzing games..."):
+        while run.status != "completed":
+            time.sleep(1)
+            run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
 
     messages = client.beta.threads.messages.list(thread_id=thread.id)
     return messages.data[0].content[0].text.value
@@ -129,6 +135,7 @@ st.markdown('<div class="title-container"><h1>Altara Sports</h1><p>AI-powered Sp
 sport = st.selectbox("🎮 Choose a Sport", ["basketball_nba", "americanfootball_nfl", "soccer_epl"])
 market = st.selectbox("📊 Select Market", ["Moneyline (h2h)", "Point Spread (spreads)", "Totals (totals)"])
 risk = st.selectbox("⚖️ Select Risk Level", ["Conservative", "Balanced", "Aggressive"])
+show_explanations = st.checkbox("Show pick explanations", value=True)
 go = st.button("Get AI Recommendations")
 
 # Map user market choice to Odds API format
@@ -139,20 +146,20 @@ market_map = {
 }
 
 if go:
-    st.info("Fetching game odds...")
+    st.info("Fetching odds...")
     odds_data = get_odds(ODDS_API_KEY, sport=sport, market=market_map[market])
 
     if not odds_data:
         st.error("No games found or error fetching data.")
     else:
-        st.success("Games loaded. Generating recommendations...")
-
         formatted = format_games_for_prompt(odds_data[:5])  # Limit to 5 games
-
-        sentiment = get_news_sentiment(sport.replace('_', ' '), NEWS_API_KEY) if NEWS_API_KEY else "No sentiment data provided."
+        sentiment = get_news_sentiment(sport.replace('_', ' '), NEWS_API_KEY) if NEWS_API_KEY else "No sentiment data."
 
         recs = get_ai_recommendation(formatted, market, sentiment, risk)
 
         st.subheader("📊 AI Betting Recommendations")
-        st.markdown(f"<div style='color:#ffffff;background:#330000;padding:1rem;border-radius:10px'>{recs}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='color:#ffffff;background:#330000;padding:1rem;border-radius:10px;white-space:pre-wrap'>{recs}</div>", unsafe_allow_html=True)
+
+        if show_explanations:
+            st.caption("Each pick includes a reason and confidence score.")
         st.caption("Altara Sports – Smarter Bets, Better Outcomes")
